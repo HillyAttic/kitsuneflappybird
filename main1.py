@@ -154,8 +154,8 @@ class Bird:
             self.velocity_y = min(self.velocity_y, self.max_fall_speed)
             self.position_y += self.velocity_y * dt
             
-            # Smoother rotation based on velocity
-            target_rotation = min(25, max(-90, -self.velocity_y * 2.5))
+            # Smoother rotation based on velocity - reduced to keep beak stable
+            target_rotation = min(5, max(-10, -self.velocity_y * 0.5))  # Much less rotation
             self.rotation += (target_rotation - self.rotation) * min(1.0, rotation_speed * dt)
         else:
             # Idle wobble animation
@@ -185,7 +185,7 @@ class PipePair:
         self.gap_y = gap_y
         self.gap_size = gap_size
         self.bottom_y = bottom_y
-        self.speed = 150.0  # Slightly faster for better flow
+        self.speed = 200.0  # Faster for better flow
         self.passed = False
 
     @property
@@ -235,28 +235,30 @@ class Game:
         self.base = self.sprites.base
         self.base_y = self.screen_height - self.base.get_height()
         self.base_x = 0.0
-        self.base_speed = 150.0  # Match pipe speed
+        self.base_speed = 200.0  # Faster base movement
 
-        self.pipe_image = self.sprites.pipes[random.choice(["green", "red"])]
+        # Choose pipe color based on background - green for day, red for night
+        if self.background_key == "day":
+            self.pipe_image = self.sprites.pipes["green"]
+        else:
+            self.pipe_image = self.sprites.pipes["red"]
         self.pipes: List[PipePair] = []
         self.pipe_spawn_timer = 0.0
-        self.pipe_spawn_interval = 1.8  # More space between pipes
-        self.pipe_gap = 140  # Larger gap for easier gameplay
+        self.pipe_spawn_interval = 1.5  # Less space between pipes for faster gameplay
+        self.pipe_gap = 140  # Use constant gap size (same as base_pipe_gap)
 
         self.bird_frames = self.sprites.birds[random.choice(["yellow", "blue", "red"])]
         self.bird = Bird(self.bird_frames, (self.screen_width // 4, self.screen_height // 2))
-        self.gravity = 700.0  # Reduced gravity for better control
+        self.gravity = 900.0  # Increased gravity for faster movement
         self.rotation_speed = 8.0  # Faster rotation response
-        self.flap_impulse = 280.0  # Stronger flap
+        self.flap_impulse = 320.0 # Stronger flap for better control
 
         self.state = "WELCOME"
         self.score = 0
         self.high_score = self._load_high_score()
         
-        # Difficulty progression
-        self.base_pipe_gap = 140
-        self.min_pipe_gap = 100
-        self.gap_decrease_rate = 2  # Gap decreases every N points
+        # Pipe gap settings
+        self.base_pipe_gap = 140  # Keep gap constant throughout the game
 
     def _load_high_score(self) -> int:
         """Load high score from file if it exists."""
@@ -278,7 +280,11 @@ class Game:
         self.background_key = "night" if self.background_key == "day" else "day"
         self.background = self.sprites.backgrounds[self.background_key]
         self.base_x = 0.0
-        self.pipe_image = self.sprites.pipes[random.choice(["green", "red"])]
+        # Choose pipe color based on background - green for day, red for night
+        if self.background_key == "day":
+            self.pipe_image = self.sprites.pipes["green"]
+        else:
+            self.pipe_image = self.sprites.pipes["red"]
         self.pipes.clear()
         self.pipe_spawn_timer = 0.0
         self.bird_frames = self.sprites.birds[random.choice(["yellow", "blue", "red"])]
@@ -288,9 +294,8 @@ class Game:
         self.pipe_gap = self.base_pipe_gap  # Reset difficulty
 
     def spawn_pipe(self) -> None:
-        # Dynamic difficulty: gap gets smaller as score increases
-        current_gap = max(self.min_pipe_gap, 
-                         self.base_pipe_gap - (self.score // self.gap_decrease_rate) * 5)
+        # Constant gap size - no difficulty progression
+        current_gap = self.base_pipe_gap  # Keep gap constant throughout the game
         
         min_center = int(self.screen_height * 0.25) + current_gap // 2
         max_center = int(self.base_y - 20 - current_gap // 2)
